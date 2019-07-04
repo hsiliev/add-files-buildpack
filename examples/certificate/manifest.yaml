@@ -1,0 +1,32 @@
+---
+applications:
+  - name: java-app
+    memory: 512M
+    path: server.jar
+    buildpacks:
+      - https://github.com/hsiliev/add-files-buildpack.git
+      - https://github.com/cloudfoundry/java-buildpack.git#v4.19.1
+    env:
+      JBP_CONFIG_OPEN_JDK_JRE: '{ jre: { version: 1.8.+ }, memory_calculator: { stack_threads: 3, class_count: 5, headroom: 1 } }'
+      CONTENT_TO_ADD: |
+        ---
+        files:
+          - path: ".profile"
+            content: |
+              #!/bin/bash
+
+              set -ex
+
+              mkdir -p $HOME/tmp/ssl
+
+              for SERVICE in postgresql mongodb; do
+                LEN="$(echo "${VCAP_SERVICES}" | jq --raw-output ".${SERVICE} | length")"
+                for (( i=0; i<${LEN}; i++ )); do
+                  CA_BASE64="$(echo "${VCAP_SERVICES}" | jq --raw-output ".${SERVICE}[${i}].credentials.ca_base64")"
+                  if [[ "${CA_BASE64}" != "null" ]]; then
+                    echo "Importing CA certificate for ${SERVICE}[${i}]..."
+                    echo ${CA_BASE64} | base64 -d > $HOME/tmp/ssl/${SERVICE}${i}.crt
+                    $HOME/.java-buildpack/open_jdk_jre/bin/keytool -keystore $HOME/.java-buildpack/open_jdk_jre/lib/security/cacerts -storepass changeit -importcert -noprompt -alias mongodb${i} -file $HOME/tmp/ssl/${SERVICE}${i}.crt
+                  fi
+                done
+              done

@@ -1,0 +1,17 @@
+#!/usr/bin/env ruby
+
+require 'yaml'
+
+$stdout.sync = true
+
+build_path = ARGV[0]
+files_to_add = YAML.safe_load(ENV['CONTENT_TO_ADD'])['files']
+
+puts '-----> Add-files Buildpack ...'
+files_to_add.each do |entry|
+  path = "#{build_path}/#{entry['path']}"
+  File.open(path, 'w') do |file|
+    puts "       Creating #{path} ..."
+    file.write(entry['content'])
+  end
+end

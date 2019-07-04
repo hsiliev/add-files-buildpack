@@ -1,0 +1,24 @@
+#!/usr/bin/env ruby
+
+require 'yaml'
+
+if ENV['CONTENT_TO_ADD']
+  puts 'Found description of content to add'
+  files_to_add = YAML.safe_load(ENV['CONTENT_TO_ADD'])['files']
+
+  unless files_to_add.nil? || files_to_add.length.positive?
+    puts 'Empty or non-existing "files" list !'
+    exit 1
+  end
+
+  expected = %w[path content]
+  valid = expected.all? { |key| !files_to_add[key].nil? }
+  unless valid
+    puts "Invalid files list format: #{files_to_add}"
+    exit 1
+  end
+
+  exit 0
+else
+  exit 1
+end
